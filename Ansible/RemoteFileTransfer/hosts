@@ -1,0 +1,5 @@
+[serverA]
+192.168.1.176 ansible_connection=ssh ansible_user=user ansible_ssh_pass=userpass
+
+[serverB]
+192.168.1.216 ansible_connection=ssh ansible_user=user ansible_ssh_pass=userpass
