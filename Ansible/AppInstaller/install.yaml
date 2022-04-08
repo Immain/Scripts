@@ -1,0 +1,42 @@
+########################################
+# Windows Applicatin Installer Rev 3.1 #
+########################################
+# Important Stuff - Do Not Delete #
+- hosts: windows
+  gather_facts: yes
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+  tasks:
+
+# Pop Up Message To Warn Users #
+  - name: Setting Up Windows For The First Time
+    win_msg:
+      display_seconds: 25
+      msg: Setting Up Windows For The First Time, Go Get Some Coffee, This May Take Awhile
+
+# Install openvpn Connect #
+  - name: Install OpenVPN Connect
+    win_package:
+      path: C:\temp\openvpn-connect.msi
+      state: present
+
+# Add Wi-Fi Profile #
+   - name: Deploy Guest Network Wi-Fi Profile to System
+     win_shell: C:\temp\wifiprofile.ps1 >> c:\temp\logs\wifi\wifiprofile-{{ date }}.txt
+
+# Install Microsoft Teams #
+  - name: Install Teams on Workstation
+    win_shell: Start-Process -Wait -FilePath C:\temp\MSTeamsSetup_c_w_.exe -Argument "/silent" -PassThru
+
+# Install Packages #
+  - name: Install First-Time Packages
+    win_chocolatey:
+      name:
+      - adobereader
+      - vlc
+      - 7zip
+      - zoom
+      - googlechrome
+      - firefox
+      - spotify
+      state: present
