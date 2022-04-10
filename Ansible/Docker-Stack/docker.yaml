@@ -1,0 +1,37 @@
+---
+- name: docker
+  hosts: localhost
+  become: yes
+
+  tasks:
+  - name: Add Docker repo
+    yum_repository:
+      name: docker
+      description: repo for docker
+      baseurl: https://download.docker.com/linux/centos/7/x86_64/stable/
+      gpgcheck: no
+
+  - name: Installing docker
+    command:
+      cmd: dnf install docker-ce --nobest -y
+
+  - name: Start and enable docker
+    systemd:
+      name: docker
+      state: started
+      enabled: yes
+
+  - name: install python3.6
+    package:
+      name: python36
+      state: present
+
+  - name: Add Docker-Compose
+    pip:
+      name: docker-compose
+
+  - name: deploy Docker Compose stack
+    docker_compose:
+      project_src: /home/pdsllc/Desktop/Ansible/docker/compose
+      files:
+      - docker-compose.yaml
