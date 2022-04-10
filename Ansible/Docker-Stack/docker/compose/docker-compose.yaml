@@ -1,0 +1,29 @@
+version: "3"
+services:
+  mariadb:
+    image: mariadb
+    restart: always
+    ports:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: somepassword
+      MYSQL_DATABASE: database
+      MYSQL_USER: someuser
+      MYSQL_PASSWORD: somepassword
+    volumes:
+      - /var/lib/mysql
+  #WordPress image based on Apache
+  wordpress:
+    depends_on:
+      - mariadb
+    image: wordpress:latest
+    restart: always
+    ports:
+      - "8097:80"
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: someuser
+      WORDPRESS_DB_PASSWORD: somepassword
+      WORDPRESS_DB_NAME: database
+    volumes:
+      - /var/www/html
