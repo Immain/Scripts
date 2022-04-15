@@ -1,5 +1,5 @@
 ########################################
-# Windows Applicatin Installer Rev 3.1 #
+#        Auto Installer Rev 4.1.       #
 ########################################
 # Important Stuff - Do Not Delete #
 - hosts: windows
@@ -12,7 +12,25 @@
   - name: Setting Up Windows For The First Time
     win_msg:
       display_seconds: 25
-      msg: Setting Up Windows For The First Time, Go Get Some Coffee, This May Take Awhile
+      msg: "SYSTEM CONNECTED -  Setting Up Windows For The First Time, Go Get Some Coffee, This May Take Awhile"
+
+# Copy Folder From Network Drive # 
+  - name: Create Directory Temp
+    win_file:
+      path: C:\temp
+      state: directory
+
+# Copy Temp Folder from Condor to Temp #      
+  - name: Copying Folder From Windows Server to Temp Folder on Remote Machine
+    win_copy:
+      src: \\Path\To\Server\File\
+      dest: C:\temp
+      remote_src: True
+    become: True
+    become_method: runas
+    vars:
+      ansible_become_user: domain\user
+      ansible_become_pass: domainpassword
 
 # Install openvpn Connect #
   - name: Install OpenVPN Connect
@@ -20,9 +38,24 @@
       path: C:\temp\openvpn-connect.msi
       state: present
 
-# Add Wi-Fi Profile #
-   - name: Deploy Guest Network Wi-Fi Profile to System
-     win_shell: C:\temp\wifiprofile.ps1 >> c:\temp\logs\wifi\wifiprofile-{{ date }}.txt
+# Create Log Folders
+  - name: Creating wifi Log Folder
+    win_file:
+      path: C:\temp\logs\wifi
+      state: directory
+
+  - name: Creating bloatware Log Folder
+    win_file:
+      path: C:\temp\logs\bloatware
+      state: directory
+
+# Remove Sysprep Bloatware #
+  - name: Remove Bloatware
+    win_shell: C:\temp\scripts\Windows10SysPrepDebloater.ps1 >> c:\temp\logs\bloatware\bloatware-removal-{{ date }}.txt
+
+# Add Secure Network #
+  - name: Deploy Secure Network Wi-Fi Profile to System
+    win_shell: C:\temp\secure.ps1 >> c:\temp\logs\wifi\secure-{{ date }}.txt
 
 # Install Microsoft Teams #
   - name: Install Teams on Workstation
@@ -32,6 +65,7 @@
   - name: Install First-Time Packages
     win_chocolatey:
       name:
+      - microsoft-teams.install
       - adobereader
       - vlc
       - 7zip
@@ -40,3 +74,65 @@
       - firefox
       - spotify
       state: present
+
+# Setup Auto Login Temporarily #
+  - name: Setting Temporary Auto Login 
+    community.windows.win_auto_logon:
+      username: windowsuser
+      password: userpassword
+
+# Reboot #
+  - name: Reboot Windows
+    win_shell: C:\temp\scripts\restart.ps1
+
+# Wait #
+  - name: Wait for Windows to Reboot
+    wait_for:
+      timeout: 180
+    delegate_to: localhost
+
+# Pop Up Message To Warn Users #
+  - name: Connected - Continuing
+    win_msg:
+      display_seconds: 25
+      msg: "SYSTEM CONNECTED - Continuing Installation"
+
+# Finish Setup #
+  - name: Ensure that WinRM is started when the system has settled
+    win_service:
+      name: WinRM
+      start_mode: delayed
+
+# Remove Auto Login #
+  - name: Removing Temporary Auto Login
+    community.windows.win_auto_logon:
+      state: absent
+
+# Add Endpoint to Windows Domain #
+  - name: Join Windows Domain
+    win_domain_membership:
+      dns_domain_name: domainname.local
+      ansible_become_user: domain\user
+      ansible_become_pass: domainpassword
+      state: domain
+    register: domain_state
+  - win_shell: C:\temp\scripts\restart.ps1
+    when: domain_state.reboot_required
+
+# Wait #
+  - name: Wait for Windows to Reboot
+    wait_for:
+      timeout: 180
+    delegate_to: localhost
+
+# Remove Temp Folder #
+  - name: Remove Temp Folder from System
+    win_file:
+      path: C:\temp
+      state: absent
+
+# Pop Up Message To Warn Users #
+  - name: Setting Up Windows For The First Time
+    win_msg:
+      display_seconds: 25
+      msg: "SYSTEM CONNECTED - Setup Completed"
