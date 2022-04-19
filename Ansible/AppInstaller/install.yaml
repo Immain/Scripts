@@ -1,5 +1,5 @@
 ########################################
-#        Auto Installer Rev 4.1.       #
+# Edge Autonomy Auto Installer Rev 4.7 #
 ########################################
 # Important Stuff - Do Not Delete #
 - hosts: windows
@@ -11,19 +11,42 @@
 # Pop Up Message To Warn Users #
   - name: Setting Up Windows For The First Time
     win_msg:
-      display_seconds: 25
+      display_seconds: 10
       msg: "SYSTEM CONNECTED -  Setting Up Windows For The First Time, Go Get Some Coffee, This May Take Awhile"
 
-# Copy Folder From Network Drive # 
+# Setup Auto Login Temporarily #
+  - name: Setting Temporary Auto Login
+    community.windows.win_auto_logon:
+      username: user
+      password: password
+
+# Add Endpoint to Domain
+  - name: Join Domain
+    win_domain_membership:
+      dns_domain_name: domainname.local
+      domain_admin_user: domain\user
+      domain_admin_password: domainpassword
+      state: domain
+    register: domain_state
+  - win_shell: Restart-Computer -force
+    when: domain_state.reboot_required
+
+# Wait #
+  - name: Wait for Windows to Reboot
+    wait_for:
+      timeout: 180
+    delegate_to: localhost
+
+# Copy Folder From Network Drive #
   - name: Create Directory Temp
     win_file:
       path: C:\temp
       state: directory
 
-# Copy Temp Folder from Condor to Temp #      
-  - name: Copying Folder From Windows Server to Temp Folder on Remote Machine
+# Copy Temp Folder from Server to Temp #
+  - name: Copying Folder From Server to Temp Folder on Remote Machine
     win_copy:
-      src: \\Path\To\Server\File\
+      src: \\Server\Path\To\File\
       dest: C:\temp
       remote_src: True
     become: True
@@ -53,9 +76,9 @@
   - name: Remove Bloatware
     win_shell: C:\temp\scripts\Windows10SysPrepDebloater.ps1 >> c:\temp\logs\bloatware\bloatware-removal-{{ date }}.txt
 
-# Add Secure Network #
+# Add Secure Wi-Fi Network #
   - name: Deploy Secure Network Wi-Fi Profile to System
-    win_shell: C:\temp\secure.ps1 >> c:\temp\logs\wifi\secure-{{ date }}.txt
+    win_shell: C:\temp\jnaesecure.ps1 >> c:\temp\logs\wifi\jnaesecure-{{ date }}.txt
 
 # Install Microsoft Teams #
   - name: Install Teams on Workstation
@@ -75,12 +98,19 @@
       - spotify
       state: present
 
-# Setup Auto Login Temporarily #
-  - name: Setting Temporary Auto Login 
+# Remove Auto Login #
+  - name: Removing Temporary Auto Login
     community.windows.win_auto_logon:
-      username: windowsuser
-      password: userpassword
+      state: absent
 
+# Create Registry for Default Apps Assosciations #
+  - name: Create Default Assosciations for Windows
+    ansible.windows.win_regedit:
+      path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
+      name: DefaultAssociationsConfiguration
+      data: \\Condor\IT\Edge\temp\scripts\defaultassociations.xml
+      type: string
+      
 # Reboot #
   - name: Reboot Windows
     win_shell: C:\temp\scripts\restart.ps1
@@ -92,38 +122,59 @@
     delegate_to: localhost
 
 # Pop Up Message To Warn Users #
-  - name: Connected - Continuing
+  - name: Setting Up Windows For The First Time
     win_msg:
       display_seconds: 25
-      msg: "SYSTEM CONNECTED - Continuing Installation"
+      msg: "SYSTEM CONNECTED - Continuing"
+
+# Add Shortcuts to Public Desktop #
+  - name: Create an application shortcut for Adobe Reader
+    community.windows.win_shortcut:
+      src: C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRD32.exe
+      dest: C:\Users\Public\Desktop\Acrobat Reader DC.lnk
+      icon: C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRD32.exe,0
+
+  - name: Create an application shortcut for Microsoft Outlook
+    community.windows.win_shortcut:
+     src: C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.exe
+     dest: C:\Users\Public\Desktop\Outlook.lnk
+     icon: C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.exe,0
+
+  - name: Create an application shortcut for Microsoft Excel
+    community.windows.win_shortcut:
+     src: C:\Program Files\Microsoft Office\root\Office16\EXCEL.exe
+     dest: C:\Users\Public\Desktop\Excel.lnk
+     icon: C:\Program Files\Microsoft Office\root\Office16\EXCEL.exe,0
+
+  - name: Create an application shortcut for Microsoft Word
+    community.windows.win_shortcut:
+      src: C:\Program Files\Microsoft Office\root\Office16\WINWORD.exe
+      dest: C:\Users\Public\Desktop\Word.lnk
+      icon: C:\Program Files\Microsoft Office\root\Office16\WINWORD.exe,0
+
+  - name: Create an application shortcut for Microsoft PowerPoint
+    community.windows.win_shortcut:
+      src: C:\Program Files\Microsoft Office\root\Office16\POWERPNT.exe
+      dest: C:\Users\Public\Desktop\PowerPoint.lnk
+      icon: C:\Program Files\Microsoft Office\root\Office16\POWERPNT.exe,0
+
+  - name: Create an application shortcut for Teams
+    community.windows.win_shortcut:
+      src: C:\Users\admin\AppData\Local\Microsoft\Teams\current\Teams.exe
+      dest: C:\Users\Public\Desktop\Teams.lnk
+      icon: C:\Users\admin\AppData\Local\Microsoft\Teams\current\Teams.exe,0
+
+# Add Shortcut To Desktop
+  - name: Create a URL shortcut for the Ansible website
+    community.windows.win_shortcut:
+      src: https://LinkToWebsite.com
+      dest: '%Public%\Desktop\websitename.url'
 
 # Finish Setup #
   - name: Ensure that WinRM is started when the system has settled
     win_service:
       name: WinRM
       start_mode: delayed
-
-# Remove Auto Login #
-  - name: Removing Temporary Auto Login
-    community.windows.win_auto_logon:
-      state: absent
-
-# Add Endpoint to Windows Domain #
-  - name: Join Windows Domain
-    win_domain_membership:
-      dns_domain_name: domainname.local
-      ansible_become_user: domain\user
-      ansible_become_pass: domainpassword
-      state: domain
-    register: domain_state
-  - win_shell: C:\temp\scripts\restart.ps1
-    when: domain_state.reboot_required
-
-# Wait #
-  - name: Wait for Windows to Reboot
-    wait_for:
-      timeout: 180
-    delegate_to: localhost
 
 # Remove Temp Folder #
   - name: Remove Temp Folder from System
