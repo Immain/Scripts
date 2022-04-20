@@ -78,7 +78,7 @@
 
 # Add Secure Wi-Fi Network #
   - name: Deploy Secure Network Wi-Fi Profile to System
-    win_shell: C:\temp\jnaesecure.ps1 >> c:\temp\logs\wifi\jnaesecure-{{ date }}.txt
+    win_shell: C:\temp\wifisecure.ps1 >> c:\temp\logs\wifi\wifisecure-{{ date }}.txt
 
 # Install Microsoft Teams #
   - name: Install Teams on Workstation
@@ -108,7 +108,7 @@
     ansible.windows.win_regedit:
       path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
       name: DefaultAssociationsConfiguration
-      data: \\Condor\IT\Edge\temp\scripts\defaultassociations.xml
+      data: \\path\to\server\temp\scripts\defaultassociations.xml
       type: string
       
 # Reboot #
