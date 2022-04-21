@@ -6,8 +6,12 @@
   gather_facts: yes
   vars:
     date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+  vars_prompt:
+  - name: target_host
+    prompt: please enter hostname for workstation
+    private: no
+    
   tasks:
-
 # Pop Up Message To Warn Users #
   - name: Setting Up Windows For The First Time
     win_msg:
@@ -24,6 +28,7 @@
   - name: Join Domain
     win_domain_membership:
       dns_domain_name: domainname.local
+      hostname: "{{ target_host }}"
       domain_admin_user: domain\user
       domain_admin_password: domainpassword
       state: domain
